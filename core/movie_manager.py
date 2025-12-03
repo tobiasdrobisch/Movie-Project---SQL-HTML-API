@@ -30,24 +30,33 @@ class MovieDatabase:
         title = get_title_input("Enter a movie to add: ")
 
         if self._find_exact_title(title):
-            print("Movie is already listed.")
-            return
+            raise FileExistsError(f"Cannot add '{title}': movie is already listed.")
 
         storage.add_movie(title)
 
     def delete_movie(self):
         """Prompt for a movie title and delete it."""
         title = get_title_input("Enter a movie to delete: ")
+
+        if not self._find_exact_title(title):
+            raise KeyError(f"Cannot delete '{title}': movie not found.")
+
         storage.delete_movie(title)
 
     def update_movie(self):
         """Prompt for a movie and update its rating."""
         title = get_title_input("Enter a movie to update: ")
+
+        if not self._find_exact_title(title):
+            raise KeyError(f"Cannot update '{title}': movie not found.")
+
         try:
             new_rating = float(input("Enter new rating: "))
-        except ValueError:
-            print("Invalid rating.")
-            return
+            if not 0 <= new_rating <= 10:
+                raise ValueError("Rating must be between 0 and 10.")
+        except ValueError as error:
+            raise ValueError(f"Invalid rating input: {error}")
+
         storage.update_movie(title, new_rating)
 
     def show_stats(self):
@@ -55,8 +64,7 @@ class MovieDatabase:
         self._load_movies()
 
         if not self.movies:
-            print("No movies in database.")
-            return
+            raise LookupError("Cannot compute statistics: no movies in database.")
 
         ratings = sorted([m["rating"] for m in self.movies])
         count = len(ratings)
@@ -80,8 +88,7 @@ class MovieDatabase:
         """Display a random movie from the database."""
         self._load_movies()
         if not self.movies:
-            print("No movies in database.")
-            return
+            raise LookupError("Cannot pick a random movie: database is empty.")
 
         movie = random.choice(self.movies)
         print(f"{movie['title']} ({movie['year']}): {movie['rating']}")
@@ -90,32 +97,37 @@ class MovieDatabase:
         """Search and display movies by partial title match."""
         self._load_movies()
         term = input("Enter part of movie name: ").strip().lower()
-        matches = [
-            m for m in self.movies if term in m["title"].lower()
-        ]
-        if matches:
-            for movie in matches:
-                print(f"{movie['title']} ({movie['year']}): {movie['rating']}")
-        else:
-            print("No matching movies found.")
+
+        matches = [m for m in self.movies if term in m["title"].lower()]
+
+        if not matches:
+            raise LookupError(f"No movies found containing '{term}'.")
+
+        for movie in matches:
+            print(f"{movie['title']} ({movie['year']}): {movie['rating']}")
 
     def movies_sorted_by_rating(self):
         """List all movies sorted by descending rating."""
         self._load_movies()
-        sorted_movies = sorted(
-            self.movies, key=lambda m: m["rating"], reverse=True
-        )
+        if not self.movies:
+            raise LookupError("Cannot sort movies: database is empty.")
+
+        sorted_movies = sorted(self.movies, key=lambda m: m["rating"], reverse=True)
         for movie in sorted_movies:
             print(f"{movie['title']} ({movie['year']}): {movie['rating']}")
 
     def generate_website(self):
         """Generate a website with the movie list."""
         self._load_movies()
+
+        if not self.movies:
+            raise LookupError("Cannot generate website: no movies in database.")
+
         html = generator.generate_html(self.movies)
         with open("./web/index.html", "w", encoding="utf-8") as f:
             f.write(html)
-        print("Website was generated successfully.")
 
+        print("Website was generated successfully.")
 
     def _find_exact_title(self, title: str):
         """Return title if exists in movie list (case-insensitive)."""

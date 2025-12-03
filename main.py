@@ -1,5 +1,6 @@
 from core.movie_manager import MovieDatabase
 
+
 def main():
     """
     Entry point of the program.
@@ -25,8 +26,8 @@ def main():
 
         try:
             choice = int(input("Enter choice (0-9): "))
-        except ValueError:
-            print("Invalid input. Please enter a number.")
+        except ValueError as error:
+            print(f"Invalid input: {error}. Please enter a number between 0 and 9.")
             continue
 
         print()  # Empty line for better spacing
